@@ -283,7 +283,7 @@
       const key = e.key.toLowerCase();
 
       trackKeyPress(key);
-      const challengeSuccess = checkChallenge(key);
+      checkChallenge(key);
 
       if (LETTER_MAP[key]) {
         showLetterCard(key);
