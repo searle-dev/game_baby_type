@@ -138,6 +138,18 @@
       animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
+    @keyframes particleFly {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particleFly 0.8s ease-out forwards;
+    }
+
     @media (max-width: 768px) {
       #letter {
         font-size: 30vw;
@@ -227,6 +239,37 @@
     const emojiWordEl = document.getElementById('emoji-word');
     const letterCard = document.getElementById('letter-card');
     const promptEl = document.getElementById('prompt');
+    const particlesEl = document.getElementById('particles');
+
+    function spawnParticles(count, x, y) {
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 12 + 6;
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+        const dist = Math.random() * 120 + 60;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        const hue = Math.random() * 360;
+        p.style.cssText = `
+          width: ${size}px; height: ${size}px;
+          left: ${x}px; top: ${y}px;
+          background: hsl(${hue}, 70%, 70%);
+          --dx: ${dx}px; --dy: ${dy}px;
+        `;
+        particlesEl.appendChild(p);
+        p.addEventListener('animationend', () => p.remove());
+      }
+    }
+
+    function emitCardParticles(count = 12) {
+      requestAnimationFrame(() => {
+        const rect = letterCard.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        spawnParticles(count, cx, cy);
+      });
+    }
 
     function showLetterCard(key) {
       const data = LETTER_MAP[key];
@@ -234,6 +277,7 @@
       letterEl.style.color = data.color;
       emojiWordEl.textContent = `${data.emoji} ${data.word}`;
       triggerCardAnimation();
+      emitCardParticles();
       promptEl.style.display = 'none';
     }
 
@@ -243,6 +287,7 @@
       letterEl.style.color = '#E0C040';
       emojiWordEl.textContent = num === 0 ? '🌟' : NUMBER_EMOJI.repeat(num);
       triggerCardAnimation();
+      emitCardParticles();
       promptEl.style.display = 'none';
     }
 
