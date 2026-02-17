@@ -150,6 +150,18 @@
       animation: particleFly 0.8s ease-out forwards;
     }
 
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-200px) scale(0.5); opacity: 0; }
+    }
+
+    .surprise-bubble {
+      position: absolute;
+      font-size: 3rem;
+      pointer-events: none;
+      animation: floatUp 1.2s ease-out forwards;
+    }
+
     @media (max-width: 768px) {
       #letter {
         font-size: 30vw;
@@ -214,6 +226,7 @@
     };
 
     const NUMBER_EMOJI = '⭐';
+    const SURPRISE_EMOJIS = ['🎈', '⭐', '🎉', '✨', '🦋', '🌸', '💫', '🎵', '🫧', '🌟'];
 
     let lastKeyTime = 0;
     const THROTTLE_MS = 200;
@@ -292,7 +305,23 @@
     }
 
     function showSurprise() {
-      // Placeholder - will be implemented in Task 4
+      // Hide the letter card
+      letterCard.classList.remove('show');
+      letterEl.textContent = '';
+      emojiWordEl.textContent = '';
+
+      // Spawn 5-8 random emoji bubbles at random positions
+      const count = Math.floor(Math.random() * 4) + 5;
+      for (let i = 0; i < count; i++) {
+        const bubble = document.createElement('div');
+        bubble.className = 'surprise-bubble';
+        bubble.textContent = SURPRISE_EMOJIS[Math.floor(Math.random() * SURPRISE_EMOJIS.length)];
+        bubble.style.left = Math.random() * 80 + 10 + 'vw';
+        bubble.style.top = Math.random() * 60 + 20 + 'vh';
+        particlesEl.appendChild(bubble);
+        bubble.addEventListener('animationend', () => bubble.remove());
+      }
+
       promptEl.style.display = 'none';
     }
 
