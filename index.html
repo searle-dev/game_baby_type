@@ -228,6 +228,9 @@
     const NUMBER_EMOJI = '⭐';
     const SURPRISE_EMOJIS = ['🎈', '⭐', '🎉', '✨', '🦋', '🌸', '💫', '🎵', '🫧', '🌟'];
 
+    let audioCtx = null;
+    let isMuted = false;
+
     let lastKeyTime = 0;
     const THROTTLE_MS = 200;
 
@@ -284,6 +287,80 @@
       });
     }
 
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
+
+    function playDing(freq = 800) {
+      if (isMuted) return;
+      try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } catch (e) { /* silent fail */ }
+    }
+
+    function playRisingScale() {
+      if (isMuted) return;
+      try {
+        const ctx = getAudioCtx();
+        const notes = [523, 659, 784];
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.1, ctx.currentTime + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + i * 0.12);
+          osc.stop(ctx.currentTime + i * 0.12 + 0.3);
+        });
+      } catch (e) { /* silent fail */ }
+    }
+
+    function playCheer() {
+      if (isMuted) return;
+      try {
+        const ctx = getAudioCtx();
+        const chord = [523, 659, 784, 1047];
+        chord.forEach((freq) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.8);
+        });
+      } catch (e) { /* silent fail */ }
+    }
+
+    function speak(text) {
+      if (isMuted) return;
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.8;
+        u.pitch = 1.2;
+        u.volume = 0.7;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+      } catch (e) { /* silent fail */ }
+    }
+
     function showLetterCard(key) {
       const data = LETTER_MAP[key];
       letterEl.textContent = key.toUpperCase();
@@ -291,6 +368,8 @@
       emojiWordEl.textContent = `${data.emoji} ${data.word}`;
       triggerCardAnimation();
       emitCardParticles();
+      playDing(600 + Math.random() * 400);
+      speak(key.toUpperCase() + ', ' + data.word);
       promptEl.style.display = 'none';
     }
 
@@ -301,6 +380,8 @@
       emojiWordEl.textContent = num === 0 ? '🌟' : NUMBER_EMOJI.repeat(num);
       triggerCardAnimation();
       emitCardParticles();
+      playDing(700);
+      speak(key);
       promptEl.style.display = 'none';
     }
 
@@ -321,6 +402,8 @@
         particlesEl.appendChild(bubble);
         bubble.addEventListener('animationend', () => bubble.remove());
       }
+
+      playRisingScale();
 
       promptEl.style.display = 'none';
     }
