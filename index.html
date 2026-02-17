@@ -220,6 +220,14 @@
     <div id="prompt">Press any key!</div>
   </div>
   <script>
+    // Block browser shortcuts to prevent baby from closing the page
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        e.preventDefault();
+        return;
+      }
+    }, { capture: true });
+
     const LETTER_MAP = {
       a: { emoji: '🍎', word: 'Apple', color: '#E07070' },
       b: { emoji: '🐻', word: 'Bear', color: '#C0956C' },
@@ -543,6 +551,23 @@
         clearTimeout(challengeTimer);
         endChallenge(false);
       }
+    });
+
+    // Touch support - tapping screen creates emoji bubbles at touch point
+    document.getElementById('game').addEventListener('touchstart', (e) => {
+      if (e.target.closest('#parent-btn') || e.target.closest('#parent-panel')) return;
+      e.preventDefault();
+
+      for (const touch of e.changedTouches) {
+        const bubble = document.createElement('div');
+        bubble.className = 'surprise-bubble';
+        bubble.textContent = SURPRISE_EMOJIS[Math.floor(Math.random() * SURPRISE_EMOJIS.length)];
+        bubble.style.left = touch.clientX + 'px';
+        bubble.style.top = touch.clientY + 'px';
+        particlesEl.appendChild(bubble);
+        bubble.addEventListener('animationend', () => bubble.remove());
+      }
+      playDing(500 + Math.random() * 300);
     });
   </script>
 </body>
