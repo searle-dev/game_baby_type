@@ -112,6 +112,10 @@
       z-index: 30;
     }
 
+    #parent-panel.open {
+      display: block;
+    }
+
     #parent-panel label {
       display: block;
       margin-bottom: 1rem;
@@ -496,6 +500,50 @@
       void letterCard.offsetWidth; // Force reflow
       letterCard.classList.add('show');
     }
+
+    const parentBtn = document.getElementById('parent-btn');
+    const parentPanel = document.getElementById('parent-panel');
+    const muteToggle = document.getElementById('mute-toggle');
+    const challengeToggle = document.getElementById('challenge-toggle');
+    let pressTimer = null;
+
+    parentBtn.addEventListener('mousedown', () => {
+      pressTimer = setTimeout(() => {
+        parentPanel.classList.toggle('open');
+      }, 3000);
+    });
+    parentBtn.addEventListener('mouseup', () => clearTimeout(pressTimer));
+    parentBtn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+
+    // Touch events for mobile
+    parentBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      pressTimer = setTimeout(() => {
+        parentPanel.classList.toggle('open');
+      }, 3000);
+    });
+    parentBtn.addEventListener('touchend', () => clearTimeout(pressTimer));
+
+    // Close panel when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!parentPanel.contains(e.target) && e.target !== parentBtn) {
+        parentPanel.classList.remove('open');
+      }
+    });
+
+    // Toggle handlers
+    muteToggle.addEventListener('change', () => {
+      isMuted = muteToggle.checked;
+      if (isMuted) speechSynthesis.cancel();
+    });
+
+    challengeToggle.addEventListener('change', () => {
+      challengeEnabled = challengeToggle.checked;
+      if (!challengeEnabled && challengeActive) {
+        clearTimeout(challengeTimer);
+        endChallenge(false);
+      }
+    });
   </script>
 </body>
 </html>
