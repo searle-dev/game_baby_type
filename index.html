@@ -74,15 +74,19 @@
 
     #challenge-overlay {
       position: fixed;
-      top: 10vh;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 3vw;
-      color: #887050;
+      top: 1.5rem;
+      left: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: rgba(255, 245, 230, 0.92);
+      border-radius: 1.2rem;
+      padding: 0.6rem 1rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       opacity: 0;
-      transition: opacity 0.5s;
+      transform: translateX(-20px);
+      transition: opacity 0.4s, transform 0.4s;
       pointer-events: none;
-      text-align: center;
       z-index: 10;
     }
 
@@ -173,17 +177,44 @@
 
     #challenge-overlay.active {
       opacity: 1;
+      transform: translateX(0);
     }
 
     #challenge-overlay .target-letter {
-      display: inline-block;
-      font-size: 10vw;
+      font-size: clamp(2rem, 5vw, 4rem);
       font-weight: bold;
-      padding: 1rem 2rem;
-      border-radius: 1.5rem;
-      background: rgba(255, 240, 220, 0.9);
+      line-height: 1;
       animation: glowPulse 1.5s infinite;
-      margin-bottom: 0.5rem;
+    }
+
+    #challenge-overlay .challenge-emoji {
+      font-size: clamp(1.5rem, 3vw, 2.5rem);
+    }
+
+    #challenge-overlay .challenge-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    #challenge-overlay .challenge-label {
+      font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+      color: #998870;
+    }
+
+    #challenge-overlay .progress-bar {
+      width: clamp(60px, 8vw, 100px);
+      height: 5px;
+      background: #e8ddd0;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    #challenge-overlay .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #E0C040, #E07070);
+      border-radius: 3px;
+      transition: width 0.1s linear;
     }
 
     @media (max-width: 768px) {
@@ -276,21 +307,24 @@
 
     document.addEventListener('keydown', (e) => {
       e.preventDefault();
+      const isRepeat = e.repeat;
       const now = Date.now();
       if (now - lastKeyTime < THROTTLE_MS) return;
       lastKeyTime = now;
 
       const key = e.key.toLowerCase();
 
-      trackKeyPress(key);
-      checkChallenge(key);
+      if (!isRepeat) {
+        trackKeyPress(key);
+        checkChallenge(key);
+      }
 
       if (LETTER_MAP[key]) {
-        showLetterCard(key);
+        showLetterCard(key, isRepeat);
       } else if (key >= '0' && key <= '9') {
-        showNumberCard(key);
+        showNumberCard(key, isRepeat);
       } else {
-        showSurprise();
+        showSurprise(isRepeat);
       }
     });
 
@@ -392,16 +426,40 @@
       } catch (e) { /* silent fail */ }
     }
 
+    let preferredVoice = null;
+
+    function loadVoice() {
+      const voices = speechSynthesis.getVoices();
+      if (!voices.length) return;
+      // Prefer high-quality en-US voices
+      preferredVoice =
+        voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha')) ||
+        voices.find(v => v.lang === 'en-US' && v.localService) ||
+        voices.find(v => v.lang.startsWith('en-') && v.localService) ||
+        voices.find(v => v.lang.startsWith('en-')) ||
+        null;
+    }
+
+    speechSynthesis.addEventListener('voiceschanged', loadVoice);
+    loadVoice();
+
+    let isSpeaking = false;
+
     function speak(text) {
-      if (isMuted) return;
+      if (isMuted || isSpeaking) return;
       try {
+        isSpeaking = true;
         const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'en-US';
         u.rate = 0.8;
-        u.pitch = 1.2;
+        u.pitch = 1.1;
         u.volume = 0.7;
+        if (preferredVoice) u.voice = preferredVoice;
+        u.onend = () => { isSpeaking = false; };
+        u.onerror = () => { isSpeaking = false; };
         speechSynthesis.cancel();
         speechSynthesis.speak(u);
-      } catch (e) { /* silent fail */ }
+      } catch (e) { isSpeaking = false; }
     }
 
     const challengeOverlay = document.getElementById('challenge-overlay');
@@ -419,20 +477,36 @@
       }
     }
 
+    let challengeInterval = null;
+    const CHALLENGE_DURATION = 10000;
+
     function startChallenge() {
       challengeTarget = recentKeys[Math.floor(Math.random() * recentKeys.length)];
       challengeActive = true;
       const data = LETTER_MAP[challengeTarget];
       challengeOverlay.innerHTML = `
-        <div>Can you find...</div>
         <div class="target-letter" style="color: ${data.color}">${challengeTarget.toUpperCase()}</div>
-        <div>${data.emoji}</div>
+        <div class="challenge-emoji">${data.emoji}</div>
+        <div class="challenge-info">
+          <div class="challenge-label">Find this!</div>
+          <div class="progress-bar"><div class="progress-fill" id="challenge-progress"></div></div>
+        </div>
       `;
       challengeOverlay.classList.add('active');
 
+      const startTime = Date.now();
+      const progressEl = document.getElementById('challenge-progress');
+      progressEl.style.width = '100%';
+
+      challengeInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const pct = Math.max(0, 100 - (elapsed / CHALLENGE_DURATION) * 100);
+        progressEl.style.width = pct + '%';
+      }, 50);
+
       challengeTimer = setTimeout(() => {
         endChallenge(false);
-      }, 10000);
+      }, CHALLENGE_DURATION);
     }
 
     function checkChallenge(key) {
@@ -448,6 +522,7 @@
     function endChallenge(success) {
       challengeActive = false;
       challengeTarget = null;
+      clearInterval(challengeInterval);
       challengeOverlay.classList.remove('active');
 
       if (success) {
@@ -456,7 +531,7 @@
       }
     }
 
-    function showLetterCard(key) {
+    function showLetterCard(key, isRepeat = false) {
       const data = LETTER_MAP[key];
       letterEl.textContent = key.toUpperCase();
       letterEl.style.color = data.color;
@@ -464,11 +539,11 @@
       triggerCardAnimation();
       emitCardParticles();
       playDing(600 + Math.random() * 400);
-      speak(key.toUpperCase() + ', ' + data.word);
+      if (!isRepeat) speak(key.toUpperCase() + ' ... ' + data.word);
       promptEl.style.display = 'none';
     }
 
-    function showNumberCard(key) {
+    function showNumberCard(key, isRepeat = false) {
       const num = parseInt(key);
       letterEl.textContent = key;
       letterEl.style.color = '#E0C040';
@@ -476,11 +551,11 @@
       triggerCardAnimation();
       emitCardParticles();
       playDing(700);
-      speak(key);
+      if (!isRepeat) speak(key);
       promptEl.style.display = 'none';
     }
 
-    function showSurprise() {
+    function showSurprise(isRepeat = false) {
       // Hide the letter card
       letterCard.classList.remove('show');
       letterEl.textContent = '';
@@ -498,7 +573,7 @@
         bubble.addEventListener('animationend', () => bubble.remove());
       }
 
-      playRisingScale();
+      if (!isRepeat) playRisingScale();
 
       promptEl.style.display = 'none';
     }
