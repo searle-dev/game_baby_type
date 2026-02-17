@@ -162,6 +162,26 @@
       animation: floatUp 1.2s ease-out forwards;
     }
 
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255, 200, 100, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(255, 200, 100, 0.6); }
+    }
+
+    #challenge-overlay.active {
+      opacity: 1;
+    }
+
+    #challenge-overlay .target-letter {
+      display: inline-block;
+      font-size: 10vw;
+      font-weight: bold;
+      padding: 1rem 2rem;
+      border-radius: 1.5rem;
+      background: rgba(255, 240, 220, 0.9);
+      animation: glowPulse 1.5s infinite;
+      margin-bottom: 0.5rem;
+    }
+
     @media (max-width: 768px) {
       #letter {
         font-size: 30vw;
@@ -234,6 +254,14 @@
     let lastKeyTime = 0;
     const THROTTLE_MS = 200;
 
+    let keyPressCount = 0;
+    let challengeActive = false;
+    let challengeTarget = null;
+    let challengeTimer = null;
+    let recentKeys = [];
+    let challengeEnabled = true;
+    const CHALLENGE_TRIGGER = 15 + Math.floor(Math.random() * 6); // 15-20
+
     document.addEventListener('keydown', (e) => {
       e.preventDefault();
       const now = Date.now();
@@ -241,6 +269,9 @@
       lastKeyTime = now;
 
       const key = e.key.toLowerCase();
+
+      trackKeyPress(key);
+      const challengeSuccess = checkChallenge(key);
 
       if (LETTER_MAP[key]) {
         showLetterCard(key);
@@ -359,6 +390,58 @@
         speechSynthesis.cancel();
         speechSynthesis.speak(u);
       } catch (e) { /* silent fail */ }
+    }
+
+    const challengeOverlay = document.getElementById('challenge-overlay');
+
+    function trackKeyPress(key) {
+      if (/^[a-z]$/.test(key) && !recentKeys.includes(key)) {
+        recentKeys.push(key);
+        if (recentKeys.length > 8) recentKeys.shift();
+      }
+      keyPressCount++;
+
+      if (challengeEnabled && !challengeActive && keyPressCount >= CHALLENGE_TRIGGER && recentKeys.length >= 3) {
+        startChallenge();
+        keyPressCount = 0;
+      }
+    }
+
+    function startChallenge() {
+      challengeTarget = recentKeys[Math.floor(Math.random() * recentKeys.length)];
+      challengeActive = true;
+      const data = LETTER_MAP[challengeTarget];
+      challengeOverlay.innerHTML = `
+        <div>Can you find...</div>
+        <div class="target-letter" style="color: ${data.color}">${challengeTarget.toUpperCase()}</div>
+        <div>${data.emoji}</div>
+      `;
+      challengeOverlay.classList.add('active');
+
+      challengeTimer = setTimeout(() => {
+        endChallenge(false);
+      }, 10000);
+    }
+
+    function checkChallenge(key) {
+      if (!challengeActive) return false;
+      if (key === challengeTarget) {
+        clearTimeout(challengeTimer);
+        endChallenge(true);
+        return true;
+      }
+      return false;
+    }
+
+    function endChallenge(success) {
+      challengeActive = false;
+      challengeTarget = null;
+      challengeOverlay.classList.remove('active');
+
+      if (success) {
+        playCheer();
+        emitCardParticles(30);
+      }
     }
 
     function showLetterCard(key) {
