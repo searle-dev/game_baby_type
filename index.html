@@ -127,6 +127,17 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
 
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.08); opacity: 1; }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    #letter-card.show {
+      animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
     @media (max-width: 768px) {
       #letter {
         font-size: 30vw;
@@ -161,7 +172,90 @@
     <div id="prompt">Press any key!</div>
   </div>
   <script>
-    // JS will be added in later tasks
+    const LETTER_MAP = {
+      a: { emoji: '🍎', word: 'Apple', color: '#E07070' },
+      b: { emoji: '🐻', word: 'Bear', color: '#C0956C' },
+      c: { emoji: '🐱', word: 'Cat', color: '#E8A060' },
+      d: { emoji: '🐶', word: 'Dog', color: '#C09860' },
+      e: { emoji: '🐘', word: 'Elephant', color: '#A0A0B0' },
+      f: { emoji: '🐟', word: 'Fish', color: '#70A0D0' },
+      g: { emoji: '🍇', word: 'Grape', color: '#9070B0' },
+      h: { emoji: '🐴', word: 'Horse', color: '#B08860' },
+      i: { emoji: '🍦', word: 'Ice Cream', color: '#E0B0C0' },
+      j: { emoji: '🪼', word: 'Jellyfish', color: '#B070D0' },
+      k: { emoji: '🪁', word: 'Kite', color: '#70B0D0' },
+      l: { emoji: '🦁', word: 'Lion', color: '#D0A040' },
+      m: { emoji: '🌙', word: 'Moon', color: '#E0D070' },
+      n: { emoji: '🥜', word: 'Nut', color: '#C0A070' },
+      o: { emoji: '🐙', word: 'Octopus', color: '#D07090' },
+      p: { emoji: '🐧', word: 'Penguin', color: '#606080' },
+      q: { emoji: '👑', word: 'Queen', color: '#D0B040' },
+      r: { emoji: '🌈', word: 'Rainbow', color: '#D08080' },
+      s: { emoji: '☀️', word: 'Sun', color: '#E0C040' },
+      t: { emoji: '🐯', word: 'Tiger', color: '#E0A040' },
+      u: { emoji: '☂️', word: 'Umbrella', color: '#7080C0' },
+      v: { emoji: '🎻', word: 'Violin', color: '#A07050' },
+      w: { emoji: '🐋', word: 'Whale', color: '#5090B0' },
+      x: { emoji: '🎵', word: 'Xylophone', color: '#C07090' },
+      y: { emoji: '🧶', word: 'Yarn', color: '#D08090' },
+      z: { emoji: '🦓', word: 'Zebra', color: '#707070' }
+    };
+
+    const NUMBER_EMOJI = '⭐';
+
+    let lastKeyTime = 0;
+    const THROTTLE_MS = 200;
+
+    document.addEventListener('keydown', (e) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastKeyTime < THROTTLE_MS) return;
+      lastKeyTime = now;
+
+      const key = e.key.toLowerCase();
+
+      if (LETTER_MAP[key]) {
+        showLetterCard(key);
+      } else if (key >= '0' && key <= '9') {
+        showNumberCard(key);
+      } else {
+        showSurprise();
+      }
+    });
+
+    const letterEl = document.getElementById('letter');
+    const emojiWordEl = document.getElementById('emoji-word');
+    const letterCard = document.getElementById('letter-card');
+    const promptEl = document.getElementById('prompt');
+
+    function showLetterCard(key) {
+      const data = LETTER_MAP[key];
+      letterEl.textContent = key.toUpperCase();
+      letterEl.style.color = data.color;
+      emojiWordEl.textContent = `${data.emoji} ${data.word}`;
+      triggerCardAnimation();
+      promptEl.style.display = 'none';
+    }
+
+    function showNumberCard(key) {
+      const num = parseInt(key);
+      letterEl.textContent = key;
+      letterEl.style.color = '#E0C040';
+      emojiWordEl.textContent = num === 0 ? '🌟' : NUMBER_EMOJI.repeat(num);
+      triggerCardAnimation();
+      promptEl.style.display = 'none';
+    }
+
+    function showSurprise() {
+      // Placeholder - will be implemented in Task 4
+      promptEl.style.display = 'none';
+    }
+
+    function triggerCardAnimation() {
+      letterCard.classList.remove('show');
+      void letterCard.offsetWidth; // Force reflow
+      letterCard.classList.add('show');
+    }
   </script>
 </body>
 </html>
