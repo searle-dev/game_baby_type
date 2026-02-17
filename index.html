@@ -288,7 +288,18 @@
       z: { emoji: '🦓', word: 'Zebra', color: '#707070' }
     };
 
-    const NUMBER_EMOJI = '⭐';
+    const NUMBER_MAP = {
+      0: { emoji: '🌟', word: 'Zero' },
+      1: { emoji: '🌈', word: 'One' },
+      2: { emoji: '🦋', word: 'Two' },
+      3: { emoji: '⭐', word: 'Three' },
+      4: { emoji: '🌸', word: 'Four' },
+      5: { emoji: '🐠', word: 'Five' },
+      6: { emoji: '🍬', word: 'Six' },
+      7: { emoji: '🎈', word: 'Seven' },
+      8: { emoji: '🐙', word: 'Eight' },
+      9: { emoji: '🚀', word: 'Nine' }
+    };
     const SURPRISE_EMOJIS = ['🎈', '⭐', '🎉', '✨', '🦋', '🌸', '💫', '🎵', '🫧', '🌟'];
 
     let audioCtx = null;
@@ -478,7 +489,7 @@
     }
 
     let challengeInterval = null;
-    const CHALLENGE_DURATION = 10000;
+    const CHALLENGE_DURATION = 15000;
 
     function startChallenge() {
       challengeTarget = recentKeys[Math.floor(Math.random() * recentKeys.length)];
@@ -545,13 +556,14 @@
 
     function showNumberCard(key, isRepeat = false) {
       const num = parseInt(key);
+      const data = NUMBER_MAP[num];
       letterEl.textContent = key;
       letterEl.style.color = '#E0C040';
-      emojiWordEl.textContent = num === 0 ? '🌟' : NUMBER_EMOJI.repeat(num);
+      emojiWordEl.textContent = num === 0 ? data.emoji : data.emoji.repeat(num);
       triggerCardAnimation();
       emitCardParticles();
       playDing(700);
-      if (!isRepeat) speak(key);
+      if (!isRepeat) speak(num + ' ... ' + data.word);
       promptEl.style.display = 'none';
     }
 
