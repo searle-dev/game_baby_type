@@ -289,16 +289,16 @@
     };
 
     const NUMBER_MAP = {
-      0: { emoji: '🌟', word: 'Zero' },
-      1: { emoji: '🌈', word: 'One' },
-      2: { emoji: '🦋', word: 'Two' },
-      3: { emoji: '⭐', word: 'Three' },
-      4: { emoji: '🌸', word: 'Four' },
-      5: { emoji: '🐠', word: 'Five' },
-      6: { emoji: '🍬', word: 'Six' },
-      7: { emoji: '🎈', word: 'Seven' },
-      8: { emoji: '🐙', word: 'Eight' },
-      9: { emoji: '🚀', word: 'Nine' }
+      0: { emoji: '🌟', word: 'Zero', zh: '零' },
+      1: { emoji: '🌈', word: 'One', zh: '一' },
+      2: { emoji: '🦋', word: 'Two', zh: '二' },
+      3: { emoji: '⭐', word: 'Three', zh: '三' },
+      4: { emoji: '🌸', word: 'Four', zh: '四' },
+      5: { emoji: '🐠', word: 'Five', zh: '五' },
+      6: { emoji: '🍬', word: 'Six', zh: '六' },
+      7: { emoji: '🎈', word: 'Seven', zh: '七' },
+      8: { emoji: '🐙', word: 'Eight', zh: '八' },
+      9: { emoji: '🚀', word: 'Nine', zh: '九' }
     };
     const SURPRISE_EMOJIS = ['🎈', '⭐', '🎉', '✨', '🦋', '🌸', '💫', '🎵', '🫧', '🌟'];
 
@@ -437,17 +437,22 @@
       } catch (e) { /* silent fail */ }
     }
 
-    let preferredVoice = null;
+    let preferredVoiceEn = null;
+    let preferredVoiceZh = null;
 
     function loadVoice() {
       const voices = speechSynthesis.getVoices();
       if (!voices.length) return;
-      // Prefer high-quality en-US voices
-      preferredVoice =
+      preferredVoiceEn =
         voices.find(v => v.lang === 'en-US' && v.name.includes('Samantha')) ||
         voices.find(v => v.lang === 'en-US' && v.localService) ||
         voices.find(v => v.lang.startsWith('en-') && v.localService) ||
         voices.find(v => v.lang.startsWith('en-')) ||
+        null;
+      preferredVoiceZh =
+        voices.find(v => v.lang === 'zh-CN' && v.localService) ||
+        voices.find(v => v.lang.startsWith('zh-') && v.localService) ||
+        voices.find(v => v.lang.startsWith('zh-')) ||
         null;
     }
 
@@ -458,18 +463,40 @@
 
     function speak(text) {
       if (isMuted || isSpeaking) return;
+      speakSequence([{ text, lang: 'en-US' }]);
+    }
+
+    function speakBilingual(zhText, enText) {
+      if (isMuted || isSpeaking) return;
+      speakSequence([
+        { text: zhText, lang: 'zh-CN' },
+        { text: enText, lang: 'en-US' }
+      ]);
+    }
+
+    function speakSequence(items) {
+      if (!items.length) return;
       try {
         isSpeaking = true;
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'en-US';
-        u.rate = 0.8;
-        u.pitch = 1.1;
-        u.volume = 0.7;
-        if (preferredVoice) u.voice = preferredVoice;
-        u.onend = () => { isSpeaking = false; };
-        u.onerror = () => { isSpeaking = false; };
         speechSynthesis.cancel();
-        speechSynthesis.speak(u);
+        const queue = [...items];
+
+        function next() {
+          if (!queue.length) { isSpeaking = false; return; }
+          const item = queue.shift();
+          const u = new SpeechSynthesisUtterance(item.text);
+          u.lang = item.lang;
+          u.rate = 0.8;
+          u.pitch = 1.1;
+          u.volume = 0.7;
+          if (item.lang.startsWith('zh') && preferredVoiceZh) u.voice = preferredVoiceZh;
+          if (item.lang.startsWith('en') && preferredVoiceEn) u.voice = preferredVoiceEn;
+          u.onend = next;
+          u.onerror = () => { isSpeaking = false; };
+          speechSynthesis.speak(u);
+        }
+
+        next();
       } catch (e) { isSpeaking = false; }
     }
 
@@ -563,7 +590,7 @@
       triggerCardAnimation();
       emitCardParticles();
       playDing(700);
-      if (!isRepeat) speak(num + ' ... ' + data.word);
+      if (!isRepeat) speakBilingual(data.zh, data.word);
       promptEl.style.display = 'none';
     }
 
